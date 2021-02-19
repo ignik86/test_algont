@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<script src="{{ url_for('static', filename='amcharts4/core.js') }} "></script>
+<script src="{{ url_for('static', filename='amcharts4/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='amcharts4/themes/animated.js') }}"></script>
+
+<div class="container" >
+    <form method="POST">
+    {{ select.csrf_token }}
+    {{ select.tag.label }} <br>{{ select.tag(**{"onchange":"this.form.submit()"}) }}<br>
+    <br>
+    <input type="submit" value="Выбрать">    
+</form>
+</div>
+<div id="chartdiv" style="width: 100%; height: 500px"></div>
+<div class="container">
+     <table border="1" align="center" cellpadding="7" width="70%">
+         <caption>Средние значения за час интервал 5 минут</caption>
+         <tr align="center"><th align="center">date</th><th align="center">value</th></tr>
+            {% for date in average_values %}
+            <tr align="center">
+             <td >{{date}}</td><td >{{average_values[date]}}</td>
+            </tr>
+            {% endfor%}
+     </table>
+
+</div>
+<script>
+
+
+// Themes begin
+am4core.useTheme(am4themes_animated);
+// Themes end
+
+var chart = am4core.create("chartdiv", am4charts.XYChart);
+
+var data = [];
+var jsvalue = [];
+var jsdate = [];
+
+// parse from flask
+{%for value in values%}
+jsvalue.push({{ value.value }})
+d = new Date('{{value.timestamp}}')
+jsdate.push(d)
+{% endfor %}
+
+for(let i = 0; i < jsvalue.length; i++){
+  let date = new Date();
+  date.setHours(0,0,0,0);
+  date.setDate(i);
+  data.push({date:jsdate[i], value: jsvalue[i]});
+}
+var jsvalue = [];
+var jsdate = [];
+ // parse from flask
+{%for date in average_values%}
+jsvalue.push({{ average_values[date] }})
+d = new Date('{{date}}')
+jsdate.push(d)
+{% endfor %}
+
+for(let i = 0; i < jsvalue.length; i++){
+  let date = new Date();
+  date.setHours(0,0,0,0);
+  date.setDate(i);
+  data.push({date2:jsdate[i], value2: jsvalue[i]});
+}
+
+chart.data = data;
+
+chart.dateFormatter.dateFormat = "dd MMM HH:mm";
+chart.dateFormatter.inputDateFormat = "yyyy-MM-dd HH:mm";
+// Create axes
+var dateAxis = chart.xAxes.push(new am4charts.DateAxis());
+
+dateAxis.renderer.grid.template.location = 0;
+dateAxis.dateFormats.setKey("day", " dd MMMM ");   
+dateAxis.periodChangeDateFormats.setKey("hour", "[bold]dd MMM");
+
+var valueAxis = chart.yAxes.push(new am4charts.ValueAxis());
+
+
+// Create series
+var series = chart.series.push(new am4charts.LineSeries());
+series.dataFields.valueY = "value";
+series.dataFields.dateX = "date";
+series.name = "Мгновенные";
+series.tooltipText = "{dateX.formatDate('yyyy-MM-dd HH:mm')} [bold]{valueY}[/]";
+series.tooltip.pointerOrientation = "vertical";
+series.tooltip.background.cornerRadius = 20;
+series.tooltip.background.fillOpacity = 0.5;
+series.tooltip.label.padding(12,12,12,12)
+series.tooltip.pointerOrientation = "vertical";
+
+var columnseries = chart.series.push(new am4charts.ColumnSeries());
+columnseries.dataFields.valueY = "value2";
+columnseries.dataFields.dateX = "date2";
+columnseries.name = "Средние(5 мин)";
+columnseries.tooltipText = "{dateX.formatDate('yyyy-MM-dd HH:mm')} [bold]{valueY}[/]";
+columnseries.tooltip.pointerOrientation = "vertical";
+columnseries.columns.template.width = am4core.percent(2000);
+columnseries.tooltip.background.cornerRadius = 20;
+columnseries.tooltip.background.fillOpacity = 0.5;
+columnseries.tooltip.label.padding(12,12,12,12)
+columnseries.tooltip.pointerOrientation = "vertical";
+ 
+ 
+chart.cursor = new am4charts.XYCursor();
+chart.cursor.snapToSeries = series;
+chart.cursor.xAxis = dateAxis;
+
+chart.scrollbarY = new am4core.Scrollbar();
+chart.scrollbarX = new am4core.Scrollbar();
+chart.legend = new am4charts.Legend()
+chart.legend.position = "top"
+// Add chart title
+var title = chart.titles.create();
+title.text = "Показатель ";
+title.fontSize = 25;
+title.marginBottom = 30;
+</script>
+{% endblock %}
