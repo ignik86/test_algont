@@ -76,8 +76,9 @@ def values():
     delta1=60
     delta2=55
     average_values = {}
-    
+    show_average = False
     while delta2 >0:
+      
       # take records in 5 min interval
       q = logger.session.query(Values)\
         .filter(Values.param_id == select_form.tag.data)\
@@ -93,14 +94,19 @@ def values():
           sum += record[i].value
         timestamp = datetime.utcnow()- timedelta(minutes=delta2-2.5)
         average_values[timestamp] = sum/len(record) # send to values.html
-      
+        show_average = True
       #next interval
       delta1 -=5
       delta2 -=5
       
     logger.session.close()
 
-    return render_template('values.html', values=values, tags=params, select=select_form, average_values=average_values)
+    return render_template('values.html', 
+                           values=values, 
+                           tags=params, 
+                           select=select_form, 
+                           average_values=average_values,
+                           show_average=show_average)
 
 
 @app.route('/', methods=['GET'])
