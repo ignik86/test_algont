@@ -41,9 +41,9 @@ var jsdate = [];
 
 // parse from flask
 {%for value in values%}
-jsvalue.push({{ value.value }})
-d = new Date('{{value.timestamp}}')
-jsdate.push(d)
+  jsvalue.push({{ value.value }})
+  d = new Date('{{value.timestamp}}')
+  jsdate.push(d)
 {% endfor %}
 
 for(let i = 0; i < jsvalue.length; i++){
@@ -56,9 +56,9 @@ var jsvalue = [];
 var jsdate = [];
  // parse from flask
 {%for date in average_values%}
-jsvalue.push({{ average_values[date] }})
-d = new Date('{{date}}')
-jsdate.push(d)
+  jsvalue.push({{ average_values[date] }})
+  d = new Date('{{date}}')
+  jsdate.push(d)
 {% endfor %}
 
 for(let i = 0; i < jsvalue.length; i++){
@@ -67,17 +67,13 @@ for(let i = 0; i < jsvalue.length; i++){
   date.setDate(i);
   data.push({date2:jsdate[i], value2: jsvalue[i]});
 }
-
 chart.data = data;
 
-chart.dateFormatter.dateFormat = "dd MMM HH:mm";
-chart.dateFormatter.inputDateFormat = "yyyy-MM-dd HH:mm";
+chart.dateFormatter.dateFormat = "HH:mm:ss";
+chart.dateFormatter.inputDateFormat = "HH:mm:ss";
+ 
 // Create axes
 var dateAxis = chart.xAxes.push(new am4charts.DateAxis());
-
-dateAxis.renderer.grid.template.location = 0;
-dateAxis.dateFormats.setKey("day", " dd MMMM ");   
-dateAxis.periodChangeDateFormats.setKey("hour", "[bold]dd MMM");
 
 var valueAxis = chart.yAxes.push(new am4charts.ValueAxis());
 
@@ -109,7 +105,7 @@ columnseries.tooltip.pointerOrientation = "vertical";
  
 chart.cursor = new am4charts.XYCursor();
 chart.cursor.snapToSeries = series;
-chart.cursor.xAxis = dateAxis;
+//chart.cursor.xAxis = dateAxis;
 
 chart.scrollbarY = new am4core.Scrollbar();
 chart.scrollbarX = new am4core.Scrollbar();

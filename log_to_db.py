@@ -17,6 +17,8 @@ class Values(object):
     def __repr__(self):
         return "Value('%s')" % (self.value)
 
+
+      
 class Params(object):
     def __init__(self, name):
         self.name = name
@@ -24,14 +26,18 @@ class Params(object):
     def __repr__(self):
         return "Params('%s')" % (self.name)
 
+
+      
 class Db_log:
-  
   def __init__(self, db_connector):
+    """
+    Create connecton to DB 
+    Check if required table exist, if not then create tables params and values. 
+    """
     
     self.engine = create_engine(db_connector, echo=True)
     metadata = MetaData(bind=self.engine, reflect=True)
-    
-    
+     
     if not self.engine.dialect.has_table(self.engine, 'params'):  # If table don't exist, Create.  
       params_table = Table('params', metadata,
         Column('id', Integer, primary_key=True),
@@ -51,15 +57,15 @@ class Db_log:
     orm.Mapper(Values, metadata.tables['values'])
     orm.Mapper(Params, metadata.tables['params'])
     self.session = orm.Session(bind=self.engine)
-
-   
-   
+  
   
   def write_value(self, parametr_name, value):
-     # check if  params exist if not then create
+    """
+    Write value to values tables with parameter name
+    """
+    # check if  params exist if not then create
     q = self.session.query(Params).filter(Params.name == parametr_name)
     record = q.all()
-    print(len(record))
     if len(record) == 0:
       param = Params(parametr_name)
       self.session.add(param)
@@ -68,7 +74,6 @@ class Db_log:
     q = self.session.query(Params).filter(Params.name == parametr_name)
     record = q.all()
     params_id = record[0].id
-    print(params_id)
     # write to db
     val = Values(params_id, value, datetime.utcnow())
     self.session.add(val)
