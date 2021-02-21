@@ -9,16 +9,17 @@ from sqlalchemy.sql import func
 DB_CONNECT ='sqlite:///test_db.db'
 #DB_CONNECT ='sqlite:///:memory:'
 
+
 class Values(object):
     def __init__(self, param_id, value,timestamp):
         self.param_id = param_id
         self.value = value
         self.timestamp = timestamp
+
     def __repr__(self):
         return "Value('%s')" % (self.value)
 
 
-      
 class Params(object):
     def __init__(self, name):
         self.name = name
@@ -27,7 +28,6 @@ class Params(object):
         return "Params('%s')" % (self.name)
 
 
-      
 class Db_log:
   def __init__(self, db_connector):
     """
@@ -57,8 +57,7 @@ class Db_log:
     orm.Mapper(Values, metadata.tables['values'])
     orm.Mapper(Params, metadata.tables['params'])
     self.session = orm.Session(bind=self.engine)
-  
-  
+
   def write_value(self, parametr_name, value):
     """
     Write value to values tables with parameter name
@@ -79,7 +78,19 @@ class Db_log:
     self.session.add(val)
     self.session.commit()
     self.session.close()
-    
+
+  def read_value(self, parametr_id, from_date, to_date):
+
+    q = self.session.query(Values)\
+        .filter(Values.param_id == parametr_id)\
+        .filter(Values.timestamp <= to_date)\
+        .filter(Values.timestamp >= from_date)
+     
+    return q.all()
+  
+  def take_params(self):
+    q = self.session.query(Params)
+    return q.all() 
   
 def main():
   
@@ -91,6 +102,7 @@ def main():
     memory = psutil.virtual_memory()
     logger.write_value('Memory', memory.percent)
     time.sleep(5)
-    
+
+
 if __name__ == '__main__':
     main()

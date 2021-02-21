@@ -19,6 +19,7 @@ DB_CONNECT ='sqlite:///db3.db'
 nav = Nav()
 SECRET_KEY = os.urandom(32)
 
+
 @nav.navigation()
 def mynavbar():
     return Navbar(
@@ -27,7 +28,8 @@ def mynavbar():
         View('Values', 'values'),
        
     )
-    
+
+
 class SelectTag(FlaskForm):
     
     tag = SelectField(u'Параметр', validators=[DataRequired()])
@@ -40,9 +42,9 @@ class Logging_to_db(Thread):
           logger.write_value('CPU', cpu)
           memory = psutil.virtual_memory()
           logger.write_value('Memory', memory.percent)
+          logger.session.close()
           
 
-    
 def create_app():
 
   application = Flask(__name__)
@@ -57,20 +59,19 @@ def create_app():
 app = create_app()
 logger = Db_log(DB_CONNECT)
 
+
 @app.route('/values',  methods=('GET', 'POST'))
 def values():
     # take all params in params table
-    q = logger.session.query(Params)
-    params = q.all() 
+    params = logger.take_params() 
     
     select_form = SelectTag()
     select_form.tag.choices = [(g.id, g.name) for g in params] # send all params  in params table to select form
-    #take last hour values  for selected params 
-    q = logger.session.query(Values)\
-        .filter(Values.param_id == select_form.tag.data)\
-        .filter(Values.timestamp <= datetime.utcnow())\
-        .filter(Values.timestamp >= datetime.utcnow() - timedelta(hours=1))
-    values = q.all() # send last hour values to values.html
+    
+    # take last hour values  for selected params 
+    values = logger.read_value(select_form.tag.data,
+                               datetime.utcnow() - timedelta(hours=1), 
+                               datetime.utcnow()) # send last hour values to values.html
     
     # calculate average values 
     delta1=60
@@ -78,24 +79,19 @@ def values():
     average_values = {}
     show_average = False
     while delta2 >0:
-      
       # take records in 5 min interval
-      q = logger.session.query(Values)\
-        .filter(Values.param_id == select_form.tag.data)\
-        .filter(Values.timestamp <= datetime.utcnow() - timedelta(minutes=delta2))\
-        .filter(Values.timestamp >= datetime.utcnow() - timedelta(minutes=delta1))
-      
-      record = q.all()
-      
+      record = logger.read_value(select_form.tag.data,
+                               datetime.utcnow() - timedelta(minutes=delta1), 
+                               datetime.utcnow() - timedelta(minutes=delta2)) 
       if len(record) !=0: # check if we have values in interval
-        #calculate average
+        # calculate average
         sum = 0
         for i in range(len(record)):
           sum += record[i].value
         timestamp = datetime.utcnow()- timedelta(minutes=delta2-2.5)
         average_values[timestamp] = sum/len(record) # send to values.html
         show_average = True
-      #next interval
+      # next interval
       delta1 -=5
       delta2 -=5
       
@@ -117,4 +113,4 @@ def main():
 if __name__ == "__main__": 
   
     Logging_to_db().start()
-    app.run(host='0.0.0.0', port=3000, debug= False)
+    app.run(host='127.0.0.1', port=5000, debug= False)
