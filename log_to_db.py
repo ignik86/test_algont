@@ -37,7 +37,7 @@ class Db_log:
     Check if required table exist, if not then create tables params and values. 
     """
 
-        self.engine = create_engine(db_connector, echo=False)
+        self.engine = create_engine(db_connector, echo=False, connect_args={"check_same_thread": False})
         metadata = MetaData(bind=self.engine, reflect=True)
 
         if not self.engine.dialect.has_table(self.engine, 'params'):  # If table don't exist, Create.
@@ -94,16 +94,25 @@ class Db_log:
         q = self.session.query(Params)
         return q.all()
 
+    def get_parameter_name(self, id):
+        q = self.session.query(Params).filter(Params.id == id)
+        record = q.one()
+        return record.name
+
 
 def main():
     logger = Db_log(DB_CONNECT)
 
     while True:
         cpu = psutil.cpu_percent(interval=5)
-        logger.write_value('CPU', cpu)
         memory = psutil.virtual_memory()
-        logger.write_value('Memory', memory.percent)
-        time.sleep(5)
+        try:
+            logger.write_value('CPU', cpu)
+            logger.write_value('Memory', memory.percent)
+            logger.write_value('Memory in use', round(memory.used / (1024 * 1024)))
+        except Exception as e:
+            print(e)
+        logger.session.close()
 
 
 if __name__ == '__main__':

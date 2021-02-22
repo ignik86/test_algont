@@ -46,8 +46,9 @@ class Logging_to_db(Thread):
             try:
                 logger.write_value('CPU', cpu)
                 logger.write_value('Memory', memory.percent)
-            except:
-                pass
+                logger.write_value('Memory in use', round(memory.used/(1024*1024)))
+            except Exception as e:
+                print(e)
             logger.session.close()
 
 
@@ -73,15 +74,25 @@ def values():
     select_form = SelectTag()
     select_form.tag.choices = [(g.id, g.name) for g in params]  # send all params  in params table to select form
     current_time = datetime.now()
-    # take last hour values  for selected params 
+    # take last hour values  for selected params
+
     records = logger.read_value(select_form.tag.data,
                                 current_time - timedelta(hours=1),
                                 current_time)  # send last hour values to values.html
+
+    name = ' '
+    show_chart = False # flag for chart visualisation
+    if select_form.validate_on_submit():
+        show_chart = True
+        try:
+            name = logger.get_parameter_name(select_form.tag.data)  # send parameter name to values.html
+        except Exception as e:
+            print(e)
+
     # calculate average values 
     delta1 = 60
     delta2 = 55
     average_values = {}
-    show_average = False
     while delta2 >= 0:
         average_records = []
         start_interval = current_time - timedelta(minutes=delta1)
@@ -96,7 +107,6 @@ def values():
                 values_sum += average_records[i].value
             timestamp = start_interval + timedelta(minutes=2.5)
             average_values[timestamp] = values_sum / len(average_records)  # send to values.html
-            show_average = True
         # next interval
         delta1 -= 5
         delta2 -= 5
@@ -108,7 +118,8 @@ def values():
                            tags=params,
                            select=select_form,
                            average_values=average_values,
-                           show_average=show_average)
+                           show_chart=show_chart,
+                           name=name)
 
 
 @app.route('/', methods=['GET'])
