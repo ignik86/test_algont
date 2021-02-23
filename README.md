@@ -19,9 +19,15 @@ cd path_to_project
 python -m venv venv
  ```
  3. Активировать виртуальное окружение 
+ 
+  Linux/OS X
  ```
 source venv/bin/activate
  ```
+  Windows
+ ```
+ venv\Source\activate.bat
+ ````
  4. Установить зависимости
  ```
 python -m pip install -r requirements.txt
