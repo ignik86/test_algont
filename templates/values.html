@@ -28,10 +28,10 @@
   <div class="container">
       <table border="1" align="center" cellpadding="7" width="70%">
           <caption>Средние значения за час интервал 5 минут</caption>
-          <tr align="center"><th align="center">date</th><th align="center">value</th></tr>
+          <tr align="center"><th align="center">Время</th><th align="center">Значение</th></tr>
               {% for date in average_values %}
               <tr align="center">
-              <td >{{date}}</td><td >{{average_values[date]}}</td>
+              <td >{{date.strftime("%H:%M")}}</td><td >{{average_values[date]}}</td>
               </tr>
               {% endfor%}
       </table>

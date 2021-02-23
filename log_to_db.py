@@ -1,6 +1,5 @@
 import psutil
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, DateTime, Float
 from sqlalchemy import orm
@@ -19,7 +18,7 @@ class Values(object):
         self.timestamp = timestamp
 
     def __repr__(self):
-        return "Value('%s')" % (self.value)
+        return "Value('%s')" % self.value
 
 
 class Params(object):
@@ -27,15 +26,15 @@ class Params(object):
         self.name = name
 
     def __repr__(self):
-        return "Params('%s')" % (self.name)
+        return "Params('%s')" % self.name
 
 
 class Db_log:
     def __init__(self, db_connector):
         """
-    Create connecton to DB 
-    Check if required table exist, if not then create tables params and values. 
-    """
+        Create connection to DB
+        Check if required table exist, if not then create tables params and values.
+        """
 
         self.engine = create_engine(db_connector, echo=False, connect_args={"check_same_thread": False})
         metadata = MetaData(bind=self.engine, reflect=True)
@@ -60,19 +59,19 @@ class Db_log:
         orm.Mapper(Params, metadata.tables['params'])
         self.session = orm.Session(bind=self.engine)
 
-    def write_value(self, parametr_name, value):
+    def write_value(self, parameter_name: str, value: float):
         """
-    Write value to values tables with parameter name
-    """
+        Write value to values tables with parameter name with current time as timestamp
+        """
         # check if  params exist if not then create
-        q = self.session.query(Params).filter(Params.name == parametr_name)
+        q = self.session.query(Params).filter(Params.name == parameter_name)
         record = q.all()
         if len(record) == 0:
-            param = Params(parametr_name)
+            param = Params(parameter_name)
             self.session.add(param)
             self.session.commit()
         # get  params id
-        q = self.session.query(Params).filter(Params.name == parametr_name)
+        q = self.session.query(Params).filter(Params.name == parameter_name)
         record = q.all()
         params_id = record[0].id
         # write to db
@@ -81,21 +80,29 @@ class Db_log:
         self.session.commit()
         # self.session.close()
 
-    def read_value(self, parametr_id, from_date, to_date):
-
+    def read_value(self, parameter_id: int, from_date, to_date):
+        """
+        Read parameter values for given interval
+        """
         q = self.session.query(Values) \
-            .filter(Values.param_id == parametr_id) \
+            .filter(Values.param_id == parameter_id) \
             .filter(Values.timestamp <= to_date) \
             .filter(Values.timestamp >= from_date)
 
         return q.all()
 
     def take_params(self):
+        """
+        Read all parameter as list
+        """
         q = self.session.query(Params)
         return q.all()
 
-    def get_parameter_name(self, id):
-        q = self.session.query(Params).filter(Params.id == id)
+    def get_parameter_name(self, parameter_id: int):
+        """
+        Read parameter name for given id
+        """
+        q = self.session.query(Params).filter(Params.id == parameter_id)
         record = q.one()
         return record.name
 
@@ -108,7 +115,7 @@ def main():
         memory = psutil.virtual_memory()
         try:
             logger.write_value('CPU', cpu)
-            logger.write_value('Memory', memory.percent)
+            logger.write_value('Memory percent', memory.percent)
             logger.write_value('Memory in use', round(memory.used / (1024 * 1024)))
         except Exception as e:
             print(e)

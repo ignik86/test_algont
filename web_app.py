@@ -2,18 +2,16 @@ import os
 from datetime import datetime, timedelta
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, DecimalField
-from wtforms.fields.html5 import DateField
+from wtforms import SelectField
 from wtforms.validators import DataRequired
 from flask_bootstrap import Bootstrap
 from flask_nav import Nav
 from flask_nav.elements import *
 
-from flask import Flask, render_template, redirect, request, url_for
-from log_to_db import Db_log
+from flask import Flask, render_template
+from log_to_db import Db_log, Values
 from threading import Thread
 import psutil
-import time
 
 DB_CONNECT = 'sqlite:///db3.db'
 nav = Nav()
@@ -45,7 +43,7 @@ class Logging_to_db(Thread):
             memory = psutil.virtual_memory()
             try:
                 logger.write_value('CPU', cpu)
-                logger.write_value('Memory', memory.percent)
+                logger.write_value('Memory percent', memory.percent)
                 logger.write_value('Memory in use', round(memory.used/(1024*1024)))
             except Exception as e:
                 print(e)
@@ -68,36 +66,40 @@ logger = Db_log(DB_CONNECT)
 
 @app.route('/values', methods=('GET', 'POST'))
 def values():
-    # take all params in params table
-    params = logger.take_params()
 
-    select_form = SelectTag()
+    params = logger.take_params()  # take all params in params table
+
+    select_form = SelectTag()  # create select form
     select_form.tag.choices = [(g.id, g.name) for g in params]  # send all params  in params table to select form
+
+    # init variables
     current_time = datetime.now()
-    # take last hour values  for selected params
+    name = ' '  # parameter name to values.html
+    show_chart = False  # flag for showing chart visualisation
+    records = [Values(0, 0, datetime.now())]  # create empty records if no choice
 
-    records = logger.read_value(select_form.tag.data,
-                                current_time - timedelta(hours=1),
-                                current_time)  # send last hour values to values.html
-
-    name = ' '
-    show_chart = False # flag for chart visualisation
-    if select_form.validate_on_submit():
-        show_chart = True
+    if select_form.validate_on_submit():  # if submit
         try:
+            # take last hour values  for selected params
+            records = logger.read_value(select_form.tag.data,
+                                        current_time - timedelta(hours=1),
+                                        current_time)  # send last hour values to values.html
             name = logger.get_parameter_name(select_form.tag.data)  # send parameter name to values.html
+            show_chart = True
         except Exception as e:
             print(e)
+            show_chart = False
 
-    # calculate average values 
-    delta1 = 60
-    delta2 = 55
-    average_values = {}
+    # calculate average values
+    delta1 = 60  # first start_interval:  current time minus 60 minutes
+    delta2 = 55  # first end_interval: current time minus 55 minutes
+    average_values = {}  # create empty tuple for average values in 5 minutes intervals
     while delta2 >= 0:
-        average_records = []
+        average_records = []  # create empty list to save records in current interval
         start_interval = current_time - timedelta(minutes=delta1)
         end_interval = current_time - timedelta(minutes=delta2)
         for record in records:
+            # take records in current interval
             if (record.timestamp >= start_interval) and (record.timestamp <= end_interval):
                 average_records.append(record)
         if len(average_records) != 0:  # check if we have values in interval
@@ -105,8 +107,9 @@ def values():
             values_sum = 0
             for i in range(len(average_records)):
                 values_sum += average_records[i].value
-            timestamp = start_interval + timedelta(minutes=2.5)
-            average_values[timestamp] = values_sum / len(average_records)  # send to values.html
+            timestamp = start_interval + timedelta(minutes=2.5)  # timestamp at the middle of interval
+            average_values[timestamp] = round(values_sum / len(average_records), 2)  # save to send to
+            # values.html
         # next interval
         delta1 -= 5
         delta2 -= 5
