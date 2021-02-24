@@ -12,6 +12,7 @@ from flask import Flask, render_template
 from log_to_db import Db_log, Values
 from threading import Thread
 import psutil
+from flask_socketio import SocketIO, emit
 
 DB_CONNECT = 'sqlite:///db3.db'
 nav = Nav()
@@ -48,6 +49,11 @@ class Logging_to_db(Thread):
             except Exception as e:
                 print(e)
             logger.session.close()
+            current_time = datetime.now().isoformat()
+            socketio.emit('new_values', {'Memory_percent': memory.percent,
+                                       'CPU':cpu,
+                                       'Memory_in_use': round(memory.used/(1024*1024)),
+                                       'date': current_time })
 
 
 def create_app():
@@ -61,6 +67,7 @@ def create_app():
 
 
 app = create_app()
+socketio = SocketIO(app)
 logger = Db_log(DB_CONNECT)
 
 
@@ -128,8 +135,13 @@ def values():
 @app.route('/', methods=['GET'])
 def main():
     return render_template('index.html')
-
+  
+  
+@socketio.on('connect')
+def test_connect():
+    print('¯\_(ツ)_/¯')
+    emit('my response', {'data': 'Connected'})
 
 if __name__ == "__main__":
     Logging_to_db().start()
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    socketio.run(app, host='0.0.0.0', port=3000, debug=False)
