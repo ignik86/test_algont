@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta
+import time
 
 from flask_wtf import FlaskForm
 from wtforms import SelectField
@@ -49,13 +50,16 @@ class Logging_to_db(Thread):
             except Exception as e:
                 print(e)
             logger.session.close()
-            current_time = datetime.now().isoformat()
-            socketio.emit('new_values', {'Memory_percent': memory.percent,
-                                       'CPU':cpu,
-                                       'Memory_in_use': round(memory.used/(1024*1024)),
-                                       'date': current_time })
+            socketio.emit('give_id')
+        
 
-
+class Socket_send(Thread):
+    def run(self):
+      while True:
+        
+        time.sleep(5)
+        
+        
 def create_app():
     application = Flask(__name__)
 
@@ -69,7 +73,7 @@ def create_app():
 app = create_app()
 socketio = SocketIO(app)
 logger = Db_log(DB_CONNECT)
-
+id_param = 0
 
 @app.route('/values', methods=('GET', 'POST'))
 def values():
@@ -78,14 +82,16 @@ def values():
 
     select_form = SelectTag()  # create select form
     select_form.tag.choices = [(g.id, g.name) for g in params]  # send all params  in params table to select form
-
+    
     # init variables
     current_time = datetime.now()
     name = ' '  # parameter name to values.html
     show_chart = False  # flag for showing chart visualisation
     records = [Values(0, 0, datetime.now())]  # create empty records if no choice
-
+    
+    
     if select_form.validate_on_submit():  # if submit
+        id_param = select_form.tag.data
         try:
             # take last hour values  for selected params
             records = logger.read_value(select_form.tag.data,
@@ -139,9 +145,17 @@ def main():
   
 @socketio.on('connect')
 def test_connect():
-    print('¯\_(ツ)_/¯')
+    print('¯\_(ツ)_/¯-conneted')
     emit('my response', {'data': 'Connected'})
+
+    
+@socketio.on('response_id')
+def get_id(message):
+  
+   print('¯\_(ツ)_/¯-id')
+
 
 if __name__ == "__main__":
     Logging_to_db().start()
+    #Socket_send().start()
     socketio.run(app, host='0.0.0.0', port=3000, debug=False)

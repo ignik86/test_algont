@@ -43,7 +43,7 @@
 
   <script>
   // Themes begin
-  am4core.useTheme(am4themes_animated);
+ // am4core.useTheme(am4themes_animated);
   // Themes end
 
   var chart = am4core.create("chartdiv", am4charts.XYChart);
@@ -83,9 +83,24 @@
     date.setDate(i);
     data.push({date2:jsdate[i], value2: jsvalue[i]});
   }
-   
+  socket_data = data
+  //var socket = io();
+  var socket = io.connect('https://algont-ignik86903536.codeanyapp.com')
+  socket.emit = ('response_id', {data: "1"})
+  socket.on('new_values', function(msg) {
+        d = new Date(msg.date)
+        socket_data.push({date: d, value: msg.CPU});
+        console.log(msg.CPU, msg.Memory_percent, msg.Memory_in_use, msg.date)
+        chart.data = socket_data;
+   });
+   socket.on('give_id', function() {
+        socket.emit = ('response_id', {data: "1"})
+        console.log('give_id')
+        
+   });
 
   chart.data = data;
+  
 
   chart.dateFormatter.dateFormat = "HH:mm:ss";
   chart.dateFormatter.inputDateFormat = "HH:mm:ss";
@@ -139,10 +154,7 @@
   title.fontSize = 25;
   title.marginBottom = 30;
    
-  var socket = io();
-    socket.on('new_values', function(msg) {
-        console.log(msg.CPU, msg.Memory_percent, msg.Memory_in_use, msg.date)
-    });
+  
   </script>
 {% endif %}
 
